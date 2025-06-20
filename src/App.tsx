@@ -1,25 +1,24 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LoginScreen from './pages/LoginScreen';
+import AdminDashboard from './pages/AdminDashboard';
+import TransportOrgProfile from './pages/TransportOrgProfile';
+import DriverManagement from './pages/DriverManagement';
+import RouteManagement from './pages/RouteManagement';
+import StopManagement from './pages/StopManagement'; // ✅ NEW import
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<LoginScreen />} />
+        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/transport-org-profile" element={<TransportOrgProfile />} />
+        <Route path="/drivers" element={<DriverManagement />} />
+        <Route path="/routes" element={<RouteManagement />} />
+        <Route path="/stops" element={<StopManagement />} /> {/* ✅ NEW route */}
+      </Routes>
+    </Router>
   );
 }
 
