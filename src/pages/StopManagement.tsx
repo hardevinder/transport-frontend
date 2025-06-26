@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 import { API } from '../config/api';
 import { toast, ToastContainer } from 'react-toastify';
-import Swal from 'sweetalert2';
 import 'react-toastify/dist/ReactToastify.css';
 import DashboardLayout from '../components/DashboardLayout';
-import { FaEdit, FaTrash, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 
 interface Stop {
   id?: string;
@@ -14,7 +13,6 @@ interface Stop {
   address?: string;
   stopOrder: number;
   stopTime: string;
-  feeAmount?: number;
   status?: string;
   routeName?: string;
 }
@@ -33,7 +31,6 @@ const StopManagement: React.FC = () => {
     address: '',
     stopOrder: 1,
     stopTime: '',
-    feeAmount: undefined,
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -47,9 +44,9 @@ const StopManagement: React.FC = () => {
 
   const fetchAllStops = async () => {
     try {
-      const res = await axios.get<Stop[]>(`${API.STOPS}/all-with-route-name`);
+      const res = await axios.get<Stop[]>(`${API.STOPS}/all`);
       setStops(res.data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch stops.');
     }
   };
@@ -58,7 +55,7 @@ const StopManagement: React.FC = () => {
     try {
       const res = await axios.get<Route[]>(API.ROUTES);
       setRoutes(res.data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch routes.');
     }
   };
@@ -68,58 +65,43 @@ const StopManagement: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-  if (!form.routeId || !form.stopName || !form.stopTime) {
-    return toast.error('Please fill all required fields.');
-  }
-
-  const payload = {
-    ...form,
-    stopOrder: Number(form.stopOrder),
-    feeAmount: typeof form.feeAmount === 'number' ? form.feeAmount : undefined,
-  };
-
-  console.log('📦 Submitting Stop Form:', payload);
-
-  try {
-    if (editingId) {
-      await axios.put(`${API.STOPS}/${editingId}`, payload);
-      toast.success('Stop updated');
-    } else {
-      await axios.post(API.STOPS, payload);
-      toast.success('Stop created');
+    if (!form.stopName || !form.stopTime) {
+      return toast.error('Please fill required fields: Stop Name and Time.');
     }
 
-    setForm({
-      routeId: '',
-      stopName: '',
-      address: '',
-      stopOrder: 1,
-      stopTime: '',
-      feeAmount: undefined,
-    });
-    setEditingId(null);
-    setShowForm(false);
-    fetchAllStops();
-  } catch (err: any) {
-    console.error('❌ Error saving stop:', err?.response?.data || err.message);
-    toast.error('Failed to save stop');
-  }
-};
+    const payload = {
+      ...form,
+      routeId: form.routeId || undefined,
+      stopOrder: Number(form.stopOrder),
+    };
+
+    try {
+      if (editingId) {
+        await axios.put(`${API.STOPS}/${editingId}`, payload);
+        toast.success('Stop updated');
+      } else {
+        await axios.post(API.STOPS, payload);
+        toast.success('Stop created');
+      }
+
+      setForm({
+        routeId: '',
+        stopName: '',
+        address: '',
+        stopOrder: 1,
+        stopTime: '',
+      });
+      setEditingId(null);
+      setShowForm(false);
+      fetchAllStops();
+    } catch (err: any) {
+      toast.error('Failed to save stop');
+    }
+  };
 
   const handleDelete = async (id?: string) => {
     if (!id) return;
-
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'Stop will be permanently deleted!',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!',
-    });
-
-    if (result.isConfirmed) {
+    if (window.confirm('Are you sure you want to delete this stop?')) {
       try {
         await axios.delete(`${API.STOPS}/${id}`);
         toast.success('Stop deleted');
@@ -127,17 +109,6 @@ const StopManagement: React.FC = () => {
       } catch {
         toast.error('Delete failed');
       }
-    }
-  };
-
-  const handleToggleStatus = async (id?: string) => {
-    if (!id) return;
-    try {
-      await axios.patch(`${API.STOPS}/${id}/toggle-status`);
-      toast.success('Status updated');
-      fetchAllStops();
-    } catch {
-      toast.error('Status toggle failed');
     }
   };
 
@@ -170,7 +141,6 @@ const StopManagement: React.FC = () => {
                 address: '',
                 stopOrder: 1,
                 stopTime: '',
-                feeAmount: undefined,
               });
               setEditingId(null);
               setShowForm(true);
@@ -223,7 +193,6 @@ const StopManagement: React.FC = () => {
                 <th className="p-2">Route</th>
                 <th className="p-2">Order</th>
                 <th className="p-2">Time</th>
-                <th className="p-2">Fee</th>
                 <th className="p-2">Status</th>
                 <th className="p-2">Actions</th>
               </tr>
@@ -236,7 +205,6 @@ const StopManagement: React.FC = () => {
                   <td className="p-2">{stop.routeName}</td>
                   <td className="p-2">{stop.stopOrder}</td>
                   <td className="p-2">{stop.stopTime}</td>
-                  <td className="p-2">{stop.feeAmount || '—'}</td>
                   <td className="p-2">
                     {stop.status === 'active' ? (
                       <span className="text-green-600">Active</span>
@@ -251,15 +219,12 @@ const StopManagement: React.FC = () => {
                     <button onClick={() => handleDelete(stop.id)} className="text-red-600">
                       <FaTrash />
                     </button>
-                    <button onClick={() => handleToggleStatus(stop.id)} className="text-yellow-600">
-                      {stop.status === 'active' ? <FaToggleOn /> : <FaToggleOff />}
-                    </button>
                   </td>
                 </tr>
               ))}
               {filteredStops.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">
+                  <td colSpan={7} className="text-center py-4 text-gray-500">
                     No stops found.
                   </td>
                 </tr>
@@ -321,14 +286,6 @@ const StopManagement: React.FC = () => {
                   value={form.stopTime}
                   onChange={handleChange}
                   placeholder="Stop Time (e.g. 08:30 AM)"
-                  className="w-full border p-2 rounded"
-                />
-                <input
-                  name="feeAmount"
-                  type="number"
-                  value={form.feeAmount ?? ''}
-                  onChange={handleChange}
-                  placeholder="Fee Amount"
                   className="w-full border p-2 rounded"
                 />
               </div>
