@@ -13,9 +13,12 @@ import ClassManagement from './pages/ClassManagement';
 import FineSettings from './pages/FineSettings';
 import FeeStructureManagement from './pages/FeeStructureManagement';
 import FeeCollectionPage from './pages/FeeCollectionPage';
-
-// ← NEW: import the slab-opt-out page
 import SlabOptOutPage from './pages/SlabOptOutPage';
+
+// ✅ NEW: Student login, dashboard & pay
+import StudentLoginPage from './pages/StudentLoginPage';
+import StudentDashboard from './pages/StudentDashboard';
+import StudentPayPage from './pages/StudentPayPage'; // ✅ Add this import
 
 function App() {
   return (
@@ -33,8 +36,12 @@ function App() {
         <Route path="/fine-settings" element={<FineSettings />} />
         <Route path="/fee-structures" element={<FeeStructureManagement />} />
         <Route path="/fee-collection" element={<FeeCollectionPage />} />
-        {/* ✅ NEW ROUTE for managing slab opt-outs */}
         <Route path="/slab-opt-out" element={<SlabOptOutPage />} />
+
+        {/* ✅ Student login, dashboard and payment */}
+        <Route path="/student/login" element={<StudentLoginPage />} />
+        <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/student/pay" element={<StudentPayPage />} /> {/* ✅ New route */}
       </Routes>
     </Router>
   );
