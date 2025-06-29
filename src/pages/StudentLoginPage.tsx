@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from '../utils/axios';
+import axios from 'axios'; // ✅ use plain axios
+import { API } from '../config/api'; // ✅ import your API config
 import { useNavigate } from 'react-router-dom';
 
 interface LoginResponse {
@@ -23,7 +24,7 @@ const StudentLoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post<LoginResponse>('/students/login', {
+     const res = await axios.post<LoginResponse>(API.STUDENT_LOGIN, {
         admissionNumber,
         password,
       });
