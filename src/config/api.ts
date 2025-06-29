@@ -1,5 +1,8 @@
-const BASE_URL = 'http://localhost:3000/api';
-// const BASE_URL = 'https://api-transport.edubridgeerp.in';
+const BASE_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'https://api-transport.edubridgeerp.in/api'
+    : 'http://localhost:3000/api';
+
 
 
 export const API = {
