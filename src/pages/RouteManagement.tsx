@@ -296,7 +296,8 @@ const RouteManagement: React.FC = () => {
             handleSubmit(true);
           }
         });
-      } else if (status === 409 && data?.message?.includes('Stop')) {
+      }
+      else if (status === 409 && data?.message?.includes('Stop')) {
         Swal.fire({
           title: 'Duplicate Stop',
           text: data.message || 'One or more stops is already assigned to another route. Do you want to proceed?',
@@ -311,7 +312,19 @@ const RouteManagement: React.FC = () => {
         });
       } else {
         console.error('Submission error:', err.response);
-        toast.error(data?.message || 'Error saving route');
+        Swal.fire({
+        title: 'Warning',
+        text: data?.message || 'Conflict detected',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, override',
+        cancelButtonText: 'Cancel',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          handleSubmit(true); // Retry with override
+        }
+      });
+
       }
     }
   };
