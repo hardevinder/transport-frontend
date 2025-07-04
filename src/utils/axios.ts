@@ -3,7 +3,7 @@ import axios from 'axios';
 const BASE_URL =
   process.env.NODE_ENV === 'production'
     ? 'https://api-transport.edubridgeerp.in/api'
-    : 'http://localhost:3000/api';
+    : 'http://localhost:3100/api';
 
 const instance = axios.create({
   baseURL: BASE_URL,

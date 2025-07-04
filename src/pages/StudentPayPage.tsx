@@ -8,6 +8,12 @@ interface RazorpayOrderResponse {
   currency: string;
 }
 
+interface SlabDetail {
+  slab: string;
+  amount: number;
+  feeStructureId: string;
+}
+
 const StudentPayPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -21,29 +27,27 @@ const StudentPayPage: React.FC = () => {
       return;
     }
 
+    const slabsParam = searchParams.get('slabs');
+    const totalParam = searchParams.get('total');
+
+    const slabs: SlabDetail[] = slabsParam ? JSON.parse(decodeURIComponent(slabsParam)) : [];
+    const displayAmount = totalParam ? parseFloat(totalParam) : 0;
+    const amountInPaise = displayAmount * 100;
+
+    if (!slabs.length || displayAmount <= 0) {
+      console.error('❌ Missing required payment parameters:', { slabs, displayAmount });
+      alert('Invalid payment details. Please try again.');
+      navigate('/student/dashboard');
+      return;
+    }
+
     const startPayment = async () => {
-      const displayAmount = parseFloat(searchParams.get('amount') || '0'); // in ₹
-      const amountInPaise = displayAmount * 100;
-
-      const slab = searchParams.get('slab') || '';
-      const feeStructureId = searchParams.get('feeStructureId') || '';
-
-     if (!displayAmount || !slab || !feeStructureId) {
-          console.error('❌ Missing required parameters:', { displayAmount, slab, feeStructureId });
-
-        alert('Invalid payment details. Please try again.');
-        navigate('/student/dashboard');
-        return;
-      }
-
       try {
         const res = await axios.post('/payments/create-order', {
           studentId: student.id,
           amount: amountInPaise,
-          slab,
-          feeStructureId,
+          slabs, // Send full slab array
         });
-
 
         const data = res.data as RazorpayOrderResponse;
 
@@ -67,7 +71,7 @@ const StudentPayPage: React.FC = () => {
           amount: data.amount,
           currency: data.currency,
           name: 'Transport Fee Payment',
-          description: `Payment for ${slab}`,
+          description: `Payment for ${slabs.length} slab(s)`,
           order_id: data.id,
           prefill: {
             name: student.name,
@@ -80,9 +84,8 @@ const StudentPayPage: React.FC = () => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 studentId: student.id,
-                amount: displayAmount, // send rupees, not paise
-                slab,
-                feeStructureId,
+                amount: displayAmount, // in ₹
+                slabs,
               });
 
               console.log('✅ Payment verified:', verifyRes.data);
@@ -115,7 +118,9 @@ const StudentPayPage: React.FC = () => {
     };
 
     const loadRazorpayScript = () => {
-      const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      const existingScript = document.querySelector(
+        'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      );
       if (existingScript) {
         console.log('ℹ️ Razorpay script already loaded');
         startPayment();

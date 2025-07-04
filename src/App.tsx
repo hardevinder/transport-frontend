@@ -14,6 +14,8 @@ import FineSettings from './pages/FineSettings';
 import FeeStructureManagement from './pages/FeeStructureManagement';
 import FeeCollectionPage from './pages/FeeCollectionPage';
 import SlabOptOutPage from './pages/SlabOptOutPage';
+import StudentProfile from './pages/StudentProfile'; 
+
 
 // ✅ NEW: Student login, dashboard & pay
 import StudentLoginPage from './pages/StudentLoginPage';
@@ -42,6 +44,9 @@ function App() {
         <Route path="/student/login" element={<StudentLoginPage />} />
         <Route path="/student/dashboard" element={<StudentDashboard />} />
         <Route path="/student/pay" element={<StudentPayPage />} /> {/* ✅ New route */}
+
+        <Route path="/student/profile" element={<StudentProfile />} />
+
       </Routes>
     </Router>
   );

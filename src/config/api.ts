@@ -1,9 +1,7 @@
 const BASE_URL =
   process.env.NODE_ENV === 'production'
     ? 'https://api-transport.edubridgeerp.in/api'
-    : 'http://localhost:3000/api';
-
-
+    : 'http://localhost:3100/api';
 
 export const API = {
   // 🔐 Login
@@ -16,7 +14,9 @@ export const API = {
 
   // 📦 Master Data
   DRIVERS: `${BASE_URL}/drivers`,
+  DRIVER_COUNT: `${BASE_URL}/drivers/count`,        // ✅ NEW
   ROUTES: `${BASE_URL}/routes`,
+  ROUTE_COUNT: `${BASE_URL}/routes/count`,          // ✅ NEW
   STOPS: `${BASE_URL}/stops`,
   VEHICLES: `${BASE_URL}/vehicles`,
   STUDENTS: `${BASE_URL}/students`,
@@ -28,6 +28,7 @@ export const API = {
   TRANSACTIONS: `${BASE_URL}/transactions`,
   FEE_DUE_DETAILS: (studentId: string) =>
     `${BASE_URL}/transactions/fee-due-details/${studentId}`,
+  COLLECTION_SUMMARY_CARDS: `${BASE_URL}/transactions/collection-summary-cards`,
 
   // 🚫 Opt-Out Slabs
   OPT_OUT_SLABS: `${BASE_URL}/opt-out-slabs`,
@@ -36,4 +37,9 @@ export const API = {
   // 💳 Razorpay Payments
   CREATE_ORDER: `${BASE_URL}/payments/create-order`,
   VERIFY_PAYMENT: `${BASE_URL}/payments/verify-payment`,
+
+  // 👤 Student Profile
+  GET_STUDENT_PROFILE: (id: string) => `${BASE_URL}/students/${id}`,
+  UPDATE_STUDENT_PROFILE: (id: string) => `${BASE_URL}/students/${id}`,
+  UPLOAD_STUDENT_PHOTO: `${BASE_URL}/students/upload-picture`,
 };

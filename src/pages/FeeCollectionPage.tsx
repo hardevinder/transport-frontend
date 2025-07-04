@@ -361,8 +361,8 @@ const handlePrintReceipt = async (slipId: string) => {
 
               </thead>
  <tbody>
-  {Array.from(new Set(transactions.map(t => t.slipId))).map((slipId, index) => {
-    const grouped = transactions.filter(t => t.slipId === slipId);
+    {Array.from(new Set(transactions.map(t => t.slipId))).map((currentSlipId, index) => {
+    const grouped = transactions.filter(t => t.slipId === currentSlipId);
     const first = grouped[0];
     const student = students.find(s => s.id === first.studentId);
 
@@ -370,7 +370,7 @@ const handlePrintReceipt = async (slipId: string) => {
     const totalConcession = grouped.reduce((sum, t) => sum + (t.concession || 0), 0);
 
     return (
-      <tr key={slipId} className="hover:bg-gray-50">
+      <tr key={currentSlipId} className="hover:bg-gray-50">
         <td className="p-2 border font-semibold text-gray-700">{index + 1}</td>
         <td className="p-2 border">{student?.name || 'Unknown'}</td>
         <td className="p-2 border">{student?.admissionNumber || '—'}</td>
@@ -382,12 +382,13 @@ const handlePrintReceipt = async (slipId: string) => {
         <td className="p-2 border">
           {new Date(first.paymentDate).toLocaleDateString()}
         </td>
-        <td className="p-2 border font-semibold text-blue-700">{slipId}</td>
+        <td className="p-2 border font-semibold text-blue-700">{currentSlipId}</td>
         <td className="p-2 border">{first.mode}</td>
         <td className="p-2 border">
           <div className="flex gap-2">
             <button
-              onClick={() => handlePrintReceipt(slipId)}
+              onClick={() => handlePrintReceipt(currentSlipId)}
+
               className="text-green-600 hover:text-green-800"
               title="Print Receipt"
             >
