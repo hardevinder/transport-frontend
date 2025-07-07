@@ -1,7 +1,7 @@
-const BASE_URL =
+export const BASE_URL =
   process.env.NODE_ENV === 'production'
-    ? 'https://api-transport.edubridgeerp.in/api'
-    : 'http://localhost:3100/api';
+    ? 'https://api-lstravel.edubridgeerp.in/api'
+    : 'http://localhost:2100/api';
 
 export const API = {
   // 🔐 Login
@@ -14,9 +14,9 @@ export const API = {
 
   // 📦 Master Data
   DRIVERS: `${BASE_URL}/drivers`,
-  DRIVER_COUNT: `${BASE_URL}/drivers/count`,        // ✅ NEW
+  DRIVER_COUNT: `${BASE_URL}/drivers/count`,
   ROUTES: `${BASE_URL}/routes`,
-  ROUTE_COUNT: `${BASE_URL}/routes/count`,          // ✅ NEW
+  ROUTE_COUNT: `${BASE_URL}/routes/count`,
   STOPS: `${BASE_URL}/stops`,
   VEHICLES: `${BASE_URL}/vehicles`,
   STUDENTS: `${BASE_URL}/students`,
@@ -29,6 +29,7 @@ export const API = {
   FEE_DUE_DETAILS: (studentId: string) =>
     `${BASE_URL}/transactions/fee-due-details/${studentId}`,
   COLLECTION_SUMMARY_CARDS: `${BASE_URL}/transactions/collection-summary-cards`,
+  STUDENT_COUNT_BY_ROUTE: `${BASE_URL}/students/count-by-route`,
 
   // 🚫 Opt-Out Slabs
   OPT_OUT_SLABS: `${BASE_URL}/opt-out-slabs`,

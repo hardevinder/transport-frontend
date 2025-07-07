@@ -35,9 +35,17 @@ const AdminDashboard: React.FC = () => {
     // Fetch Student Count by Route
     const fetchStudentCount = async () => {
       try {
-        const res = await axios.get<{ status: number; message: string; data: { routes: any[]; total: number } }>(
-          'http://localhost:3100/api/students/count-by-route'
-        );
+      const token = localStorage.getItem('token');
+      const res = await axios.get<{ status: number; message: string; data: { routes: any[]; total: number } }>(
+        API.STUDENT_COUNT_BY_ROUTE,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+
         const { routes, total } = res.data?.data || { routes: [], total: 0 };
         setTotalStudents(total);
         setStudentRoutes(routes);

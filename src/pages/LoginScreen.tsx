@@ -7,7 +7,6 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -27,9 +26,9 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-600 to-blue-800 px-4">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        {/* Logo / Title */}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-sky-600 to-blue-800 px-4">
+      {/* Main Login Box */}
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mb-6">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-blue-800 mb-1">
             Transport Management System
@@ -38,7 +37,6 @@ const LoginScreen: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Email */}
           <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-1">Email</label>
             <input
@@ -51,7 +49,6 @@ const LoginScreen: React.FC = () => {
             />
           </div>
 
-          {/* Password */}
           <div className="mb-6">
             <label className="block text-gray-700 font-semibold mb-1">Password</label>
             <input
@@ -64,7 +61,6 @@ const LoginScreen: React.FC = () => {
             />
           </div>
 
-          {/* Button */}
           <button
             type="submit"
             className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg transition duration-200"
@@ -73,6 +69,14 @@ const LoginScreen: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {/* 🎓 Student Login CTA */}
+      <a
+         href={`${window.location.origin}/student/login`}
+        className="text-center w-full max-w-md bg-yellow-300 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 border-2 border-yellow-500"
+      >
+        🎓 Student? Click here to Login
+      </a>
     </div>
   );
 };

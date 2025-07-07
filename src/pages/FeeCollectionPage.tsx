@@ -11,9 +11,15 @@ interface Student {
   id: string;
   name: string;
   admissionNumber: string;
+  phone?: string;
   classId: string;
   class?: { id: string; name: string };
+  stop?: { stopName: string };
+  route?: { name: string };
+  addressLine?: string;
+  cityOrVillage?: string;
 }
+
 
 interface Class {
   id: string;
@@ -65,6 +71,8 @@ const FeeCollectionPage: React.FC = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'cash' | 'online'>('cash');
   const [transactionId, setTransactionId] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
 
   useEffect(() => {
     console.log('Initial useEffect running');
@@ -113,6 +121,15 @@ const FeeCollectionPage: React.FC = () => {
     console.log('Transactions state updated:', transactions);
   }, [transactions]);
 
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       fetchTransactions();
+//     }, 2000);
+
+//   return () => clearInterval(interval);
+// }, []);
+
+
   useEffect(() => {
     console.log('Students state updated:', students);
   }, [students]);
@@ -143,11 +160,13 @@ const FeeCollectionPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+const handleSelectStudent = async (id: string) => {
+  setSelectedStudentId(id);
+  const student = students.find(s => s.id === id) || null;
+  setSelectedStudent(student);  // ✅ Set full student data
+  await fetchDueDetails(id);
+};
 
-  const handleSelectStudent = async (id: string) => {
-    setSelectedStudentId(id);
-    await fetchDueDetails(id);
-  };
 
   const updateSlab = (slab: string, field: 'concession' | 'collection', value: number) => {
     setFeeSlabs(prev =>
@@ -326,6 +345,13 @@ const handlePrintReceipt = async (slipId: string) => {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">Transport Fee Collection</h2>
+           <button
+              onClick={fetchTransactions}
+              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
+            >
+              🔄 Refresh Transactions
+            </button>
+          
           <button
             onClick={() => {
               setSelectedStudentId('');
@@ -444,6 +470,24 @@ const handlePrintReceipt = async (slipId: string) => {
                 </button>
               </div>
 
+
+              {selectedStudent && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-lg text-sm text-gray-800 space-y-1">
+                  <p><strong>Name:</strong> {selectedStudent.name}</p>
+                  <p><strong>Phone:</strong> {selectedStudent.phone || 'N/A'}</p>
+                  <p><strong>Admission No:</strong> {selectedStudent.admissionNumber}</p>
+                  {selectedStudent.class && <p><strong>Class:</strong> {selectedStudent.class.name}</p>}
+                  {selectedStudent.route && <p><strong>Route:</strong> {selectedStudent.route.name}</p>}
+                  {selectedStudent.stop && <p><strong>Stop:</strong> {selectedStudent.stop.stopName}</p>}
+                  {(selectedStudent.addressLine || selectedStudent.cityOrVillage) && (
+                    <p>
+                      <strong>Address:</strong> {selectedStudent.addressLine}, {selectedStudent.cityOrVillage}
+                    </p>
+                  )}
+                </div>
+              )}
+
+
               {tab === 'class' ? (
                 <>
                   <select
@@ -482,11 +526,16 @@ const handlePrintReceipt = async (slipId: string) => {
                   />
                   <button
                     className="w-full bg-blue-600 text-white py-3 rounded-lg"
-                    onClick={() => {
+                   onClick={() => {
                       const student = students.find(s => s.admissionNumber === selectedAdmission);
-                      if (student) handleSelectStudent(student.id);
-                      else toast.error('Student not found');
+                      if (student) {
+                        handleSelectStudent(student.id);
+                        setSelectedStudent(student);  // ✅ Also set here
+                      } else {
+                        toast.error('Student not found');
+                      }
                     }}
+
                   >
                     Search & Load
                   </button>
@@ -601,6 +650,7 @@ const handlePrintReceipt = async (slipId: string) => {
                     setSelectedClass('');
                     setSelectedStudentId('');
                     setSelectedAdmission('');
+                    setSelectedStudent(null);
                   }}
                 >
                   Close

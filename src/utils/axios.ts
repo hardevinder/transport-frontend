@@ -1,9 +1,15 @@
 import axios from 'axios';
 
+// const BASE_URL =
+//   process.env.NODE_ENV === 'production'
+//     ? 'https://api-transport.edubridgeerp.in/api'
+//     : 'http://localhost:3100/api';
+
 const BASE_URL =
   process.env.NODE_ENV === 'production'
-    ? 'https://api-transport.edubridgeerp.in/api'
-    : 'http://localhost:3100/api';
+    ? 'https://api-lstravel.edubridgeerp.in/api'
+    : 'http://localhost:2100/api';
+
 
 const instance = axios.create({
   baseURL: BASE_URL,

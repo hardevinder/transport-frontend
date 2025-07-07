@@ -9,10 +9,21 @@ interface Props {
 const StudentProfileMenu: React.FC<Props> = ({ student, onLogout }) => {
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
+  const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
-  const photoUrl = student?.profilePicture
-    ? `http://localhost:3000/public${student.profilePicture}`
-    : '/default-avatar.png';
+  // Fallback-safe profile photo with cache-busting
+  const [photoUrl, setPhotoUrl] = React.useState(() => {
+    return student?.profilePicture
+      ? `${backendUrl}/public${student.profilePicture}?t=${Date.now()}`
+      : `https://api-lstravel.edubridgeerp.in/public/uploads/profile/default-avatar.png`;
+  });
+
+  // Refresh photo if student object updates
+  React.useEffect(() => {
+    if (student?.profilePicture) {
+      setPhotoUrl(`${backendUrl}/public${student.profilePicture}?t=${Date.now()}`);
+    }
+  }, [student?.profilePicture, backendUrl]);
 
   return (
     <div className="absolute top-4 right-4 z-50">
@@ -20,6 +31,9 @@ const StudentProfileMenu: React.FC<Props> = ({ student, onLogout }) => {
         <img
           src={photoUrl}
           onClick={() => setOpen(!open)}
+          onError={(e) => {
+            e.currentTarget.src = `${backendUrl}/public/default-avatar.png`;
+          }}
           className="w-10 h-10 rounded-full border-2 border-blue-500 cursor-pointer"
           alt="Student"
         />
@@ -28,6 +42,9 @@ const StudentProfileMenu: React.FC<Props> = ({ student, onLogout }) => {
             <div className="p-3 border-b text-center">
               <img
                 src={photoUrl}
+                onError={(e) => {
+                  e.currentTarget.src = `${backendUrl}/public/default-avatar.png`;
+                }}
                 className="w-12 h-12 rounded-full mx-auto mb-1"
                 alt="Avatar"
               />
