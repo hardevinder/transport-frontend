@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from '../utils/axios';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -24,9 +24,20 @@ interface FeeDue {
   vehicle?: string;
 }
 
+interface FeeDueResponse {
+  count: number;
+  page: number;
+  totalPages: number;
+  data: FeeDue[];
+}
+
 const FeeDueDetailsPage: React.FC = () => {
   const [data, setData] = useState<FeeDue[]>([]);
-  const [filtered, setFiltered] = useState<FeeDue[]>([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(10);
+
   const [classOptions, setClassOptions] = useState<string[]>([]);
   const [routeOptions, setRouteOptions] = useState<string[]>([]);
   const [busOptions, setBusOptions] = useState<string[]>([]);
@@ -40,45 +51,39 @@ const FeeDueDetailsPage: React.FC = () => {
     admissionNo: '',
   });
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      class: filters.class,
+      route: filters.route,
+      vehicle: filters.vehicle,
+      slab: filters.slab,
+      admissionNo: filters.admissionNo,
+    });
+
     axios
-      .get<{ count: number; data: FeeDue[] }>('/transactions/fee-due-details')
+      .get<FeeDueResponse>(`/transactions/fee-due-details?${queryParams.toString()}`)
       .then(res => {
-        const allData = res.data.data;
-        setData(allData);
-        setFiltered(allData);
+        const resData = res.data;
+        setData(resData.data);
+        setCount(resData.count);
+        setTotalPages(resData.totalPages);
 
-        setClassOptions([...new Set(allData.map(d => d.class))].filter(Boolean));
-        setRouteOptions([...new Set(allData.map(d => d.route))].filter(Boolean));
-        setBusOptions([...new Set(allData.map(d => d.vehicle).filter((v): v is string => typeof v === 'string'))]);
+        setClassOptions([...new Set(resData.data.map(d => d.class))].filter(Boolean));
+        setRouteOptions([...new Set(resData.data.map(d => d.route))].filter(Boolean));
+        setBusOptions([...new Set(resData.data.map(d => d.vehicle).filter((v): v is string => typeof v === 'string'))]);
 
-        // Extract all unique slab names
         const slabs = new Set<string>();
-        allData.forEach(d => d.slabs.forEach(s => slabs.add(s.slab)));
+        resData.data.forEach(d => d.slabs.forEach(s => slabs.add(s.slab)));
         setSlabOptions([...slabs]);
       })
       .catch(err => console.error('Error loading fee due details', err));
-  }, []);
+  }, [page, limit, filters]);
 
-  const handleFilter = () => {
-    const { class: cls, route, vehicle, slab, admissionNo } = filters;
-    const result = data
-      .map(d => ({
-        ...d,
-        slabs: d.slabs.filter(s =>
-          !slab || s.slab === slab
-        )
-      }))
-      .filter(d =>
-        (!cls || d.class === cls) &&
-        (!route || d.route === route) &&
-        (!vehicle || d.vehicle === vehicle) &&
-        (!admissionNo || d.admissionNo?.includes(admissionNo)) &&
-        d.slabs.length > 0
-      );
-
-    setFiltered(result);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <DashboardLayout>
@@ -120,13 +125,6 @@ const FeeDueDetailsPage: React.FC = () => {
           />
         </div>
 
-        <button
-          onClick={handleFilter}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4"
-        >
-          🔍 Filter
-        </button>
-
         {/* Table */}
         <div className="overflow-x-auto rounded shadow bg-white">
           <table className="w-full table-auto border border-gray-200">
@@ -146,13 +144,13 @@ const FeeDueDetailsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {data.length === 0 && (
                 <tr><td colSpan={11} className="text-center py-4 text-gray-500">No data found</td></tr>
               )}
-              {filtered.map((student, i) =>
+              {data.map((student, i) =>
                 student.slabs.map((slab, j) => (
                   <tr key={`${student.studentId}-${j}`} className="text-center hover:bg-gray-50">
-                    <td className="p-2 border">{i + 1}</td>
+                    <td className="p-2 border">{(page - 1) * limit + i + 1}</td>
                     <td className="p-2 border">{student.admissionNo}</td>
                     <td className="p-2 border">{student.studentName}</td>
                     <td className="p-2 border">{student.class}</td>
@@ -162,14 +160,31 @@ const FeeDueDetailsPage: React.FC = () => {
                     <td className="p-2 border">{slab.slab}</td>
                     <td className="p-2 border">₹{slab.finalPayable}</td>
                     <td className="p-2 border text-green-700 font-medium">₹{slab.paidAmount}</td>
-                    <td className={`p-2 border ${slab.status === 'Paid' ? 'text-green-600' : 'text-red-600'}`}>
-                      {slab.status}
-                    </td>
+                    <td className={`p-2 border ${slab.status === 'Paid' ? 'text-green-600' : 'text-red-600'}`}>{slab.status}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-between items-center mt-4 text-sm">
+          <span>
+            Page {page} of {totalPages} | Total: {count}
+          </span>
+          <div className="space-x-2">
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              disabled={page === 1}
+            >⬅ Prev</button>
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+            >Next ➡</button>
+          </div>
         </div>
       </div>
     </DashboardLayout>
