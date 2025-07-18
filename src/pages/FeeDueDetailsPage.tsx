@@ -37,6 +37,7 @@ const FeeDueDetailsPage: React.FC = () => {
     route: '',
     vehicle: '',
     slab: '',
+    admissionNo: '',
   });
 
   useEffect(() => {
@@ -51,7 +52,6 @@ const FeeDueDetailsPage: React.FC = () => {
         setRouteOptions([...new Set(allData.map(d => d.route))].filter(Boolean));
         setBusOptions([...new Set(allData.map(d => d.vehicle).filter((v): v is string => typeof v === 'string'))]);
 
-
         // Extract all unique slab names
         const slabs = new Set<string>();
         allData.forEach(d => d.slabs.forEach(s => slabs.add(s.slab)));
@@ -61,7 +61,7 @@ const FeeDueDetailsPage: React.FC = () => {
   }, []);
 
   const handleFilter = () => {
-    const { class: cls, route, vehicle, slab } = filters;
+    const { class: cls, route, vehicle, slab, admissionNo } = filters;
     const result = data
       .map(d => ({
         ...d,
@@ -73,6 +73,7 @@ const FeeDueDetailsPage: React.FC = () => {
         (!cls || d.class === cls) &&
         (!route || d.route === route) &&
         (!vehicle || d.vehicle === vehicle) &&
+        (!admissionNo || d.admissionNo?.includes(admissionNo)) &&
         d.slabs.length > 0
       );
 
@@ -85,7 +86,7 @@ const FeeDueDetailsPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800 mb-6">📊 Fee Due Details</h2>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
           <select className="border p-2 rounded" value={filters.class}
             onChange={e => setFilters({ ...filters, class: e.target.value })}>
             <option value="">All Classes</option>
@@ -109,6 +110,14 @@ const FeeDueDetailsPage: React.FC = () => {
             <option value="">All Slabs</option>
             {slabOptions.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+
+          <input
+            type="text"
+            placeholder="Admission No"
+            className="border p-2 rounded"
+            value={filters.admissionNo}
+            onChange={e => setFilters({ ...filters, admissionNo: e.target.value })}
+          />
         </div>
 
         <button
@@ -124,6 +133,7 @@ const FeeDueDetailsPage: React.FC = () => {
             <thead className="bg-gray-100 text-sm font-semibold text-center">
               <tr>
                 <th className="p-2 border">#</th>
+                <th className="p-2 border">Adm No</th>
                 <th className="p-2 border">Name</th>
                 <th className="p-2 border">Class</th>
                 <th className="p-2 border">Route</th>
@@ -137,12 +147,13 @@ const FeeDueDetailsPage: React.FC = () => {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={10} className="text-center py-4 text-gray-500">No data found</td></tr>
+                <tr><td colSpan={11} className="text-center py-4 text-gray-500">No data found</td></tr>
               )}
               {filtered.map((student, i) =>
                 student.slabs.map((slab, j) => (
                   <tr key={`${student.studentId}-${j}`} className="text-center hover:bg-gray-50">
                     <td className="p-2 border">{i + 1}</td>
+                    <td className="p-2 border">{student.admissionNo}</td>
                     <td className="p-2 border">{student.studentName}</td>
                     <td className="p-2 border">{student.class}</td>
                     <td className="p-2 border">{student.route}</td>
