@@ -43,11 +43,16 @@ const StudentPayPage: React.FC = () => {
 
     const startPayment = async () => {
       try {
-        const res = await axios.post('/payments/create-order', {
+       const res = await axios.post('/payments/create-order', {
           studentId: student.id,
+          studentName: student.name,
+          className: student.class?.name || '',   // adjust based on actual structure
+          // section: student.section || '',
+          routeName: student.route?.name || '',
           amount: amountInPaise,
-          slabs, // Send full slab array
+          slabs,
         });
+
 
         const data = res.data as RazorpayOrderResponse;
 

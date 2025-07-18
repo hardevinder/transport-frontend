@@ -12,6 +12,9 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  const [transactionsOpen, setTransactionsOpen] = useState(true);
+
+
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
   const toggleProfileMenu = () => setProfileMenuOpen(prev => !prev);
 
@@ -125,24 +128,53 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 </Link>
               </div>
               <div>
-                <div className="text-sm uppercase tracking-wider text-gray-300 mb-2">Fee Management</div>
-                <Link to="/fee-structures" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fee-structures') ? 'bg-blue-800' : ''}`}>
-                  Fee Structure
-                </Link>
-                <Link to="/fee-collection" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fee-collection') ? 'bg-blue-800' : ''}`}>
-                  Fee Collection
-                </Link>
-                <Link to="/transactions" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/transactions') ? 'bg-blue-800' : ''}`}>
-                  Transactions
-                </Link>
-                <Link to="/fine-settings" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fine-settings') ? 'bg-blue-800' : ''}`}>
-                  Fine Settings
-                </Link>
-                {/* NEW: Slab Opt-Out Link */}
-                <Link to="/slab-opt-out" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/slab-opt-out') ? 'bg-blue-800' : ''}`}>
-                  Slab Opt-Out
-                </Link>
-              </div>
+                  <div className="text-sm uppercase tracking-wider text-gray-300 mb-2">Fee Management</div>
+
+                  <Link to="/fee-structures" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fee-structures') ? 'bg-blue-800' : ''}`}>
+                    Fee Structure
+                  </Link>
+
+                  {/* Dropdown Toggle */}
+                  <button
+                    onClick={() => setTransactionsOpen(prev => !prev)}
+                    className="w-full text-left p-2 rounded hover:bg-blue-700 flex justify-between items-center"
+                  >
+                    <span>Transactions</span>
+                    <span>{transactionsOpen ? '▾' : '▸'}</span>
+                  </button>
+
+                  {/* Dropdown Content */}
+                  {transactionsOpen && (
+                    <div className="ml-4 space-y-1">
+                      <Link
+                        to="/fee-collection"
+                        className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fee-collection') ? 'bg-blue-800' : ''}`}
+                      >
+                        Fee Collection
+                      </Link>
+                      <Link
+                        to="/transaction-report"
+                        className={`block p-2 rounded hover:bg-blue-700 ${isActive('/transaction-report') ? 'bg-blue-800' : ''}`}
+                      >
+                        Transaction Report
+                      </Link>
+                      <Link
+                        to="/fee-due"
+                        className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fee-due') ? 'bg-blue-800' : ''}`}
+                      >
+                        Fee Due Details
+                      </Link>
+                    </div>
+                  )}
+
+                  <Link to="/fine-settings" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/fine-settings') ? 'bg-blue-800' : ''}`}>
+                    Fine Settings
+                  </Link>
+                  <Link to="/slab-opt-out" className={`block p-2 rounded hover:bg-blue-700 ${isActive('/slab-opt-out') ? 'bg-blue-800' : ''}`}>
+                    Slab Opt-Out
+                  </Link>
+                </div>
+
             </nav>
           </aside>
         )}

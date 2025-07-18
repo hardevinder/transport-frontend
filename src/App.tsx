@@ -15,6 +15,10 @@ import FeeStructureManagement from './pages/FeeStructureManagement';
 import FeeCollectionPage from './pages/FeeCollectionPage';
 import SlabOptOutPage from './pages/SlabOptOutPage';
 import StudentProfile from './pages/StudentProfile'; 
+import TransactionReportPage from './pages/TransactionReportPage';
+import FeeDueDetailsPage from './pages/FeeDueDetailsPage';
+
+
 
 
 // ✅ NEW: Student login, dashboard & pay
@@ -52,6 +56,12 @@ function App() {
         <Route path="/student/pay" element={<StudentPayPage />} /> {/* ✅ New route */}
 
         <Route path="/student/profile" element={<StudentProfile />} />
+
+        <Route path="/transaction-report" element={<TransactionReportPage />} />
+
+
+        <Route path="/fee-due" element={<FeeDueDetailsPage />} /> {/* ✅ New route */}
+
 
       </Routes>
     </Router>

@@ -18,8 +18,9 @@ interface Student {
   route?: { name: string };
   addressLine?: string;
   cityOrVillage?: string;
-}
+  vehicle?: { busNo: string }; // ✅ Add this
 
+}
 
 interface Class {
   id: string;
@@ -60,7 +61,7 @@ const FeeCollectionPage: React.FC = () => {
   const [selectedAdmission, setSelectedAdmission] = useState('');
   const [feeSlabs, setFeeSlabs] = useState<FeeSlab[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -72,102 +73,68 @@ const FeeCollectionPage: React.FC = () => {
   const [paymentMode, setPaymentMode] = useState<'cash' | 'online'>('cash');
   const [transactionId, setTransactionId] = useState<string>('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  
 
-
+  // Load students, classes and today's transactions on mount
   useEffect(() => {
-    console.log('Initial useEffect running');
     axios
       .get<Student[]>(API.STUDENTS)
-      .then(res => {
-        console.log('Students fetched:', res.data);
-        setStudents(res.data);
-      })
-      .catch(err => {
-        console.error('Failed to load students:', err);
-        toast.error('Failed to load students');
-      });
+      .then(res => setStudents(res.data))
+      .catch(() => toast.error('Failed to load students'));
+
     axios
       .get<Class[]>(API.CLASSES)
-      .then(res => {
-        console.log('Classes fetched:', res.data);
-        setClasses(res.data);
-      })
-      .catch(err => {
-        console.error('Failed to load classes:', err);
-        toast.error('Failed to load classes');
-      });
-    fetchTransactions();
+      .then(res => setClasses(res.data))
+      .catch(() => toast.error('Failed to load classes'));
 
-    // Optional: Mock data for testing UI rendering (uncomment to test)
-    /*
-    setTransactions([
-      {
-        id: '1',
-        slipId: 'slip1',
-        studentId: 'student1',
-        feeStructureId: 'fee1',
-        slab: 'Monthly',
-        amount: 1000,
-        concession: 100,
-        paymentDate: new Date().toISOString(),
-        paymentMode: 'Cash',
-        status: 'success',
-      },
-    ]);
-    */
+    fetchTransactions();
   }, []);
 
-  useEffect(() => {
-    console.log('Transactions state updated:', transactions);
-  }, [transactions]);
+  // Fetch all transactions
+  const [totalCollection, setTotalCollection] = useState(0);
 
-//   useEffect(() => {
-//     const interval = setInterval(() => {
-//       fetchTransactions();
-//     }, 2000);
+  const fetchTransactions = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axios.get<{ transactions: Transaction[]; totalCollection?: number }>(
+        `${API.TRANSACTIONS}/today`
+      );
+      setTransactions(res.data.transactions);
+      // Fallback in case `totalCollection` not provided from backend
+      const total = res.data.totalCollection ?? res.data.transactions.reduce(
+        (sum, t) => sum + (t.amount || 0),
+        0
+      );
+      setTotalCollection(total);
+    } catch (err: any) {
+      toast.error(`Failed to load transactions: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-//   return () => clearInterval(interval);
-// }, []);
 
-
-  useEffect(() => {
-    console.log('Students state updated:', students);
-  }, [students]);
-
+  // Fetch due‐slabs for a student
   const fetchDueDetails = async (studentId: string) => {
     try {
       const res = await axios.get<{ studentId: string; slabs: FeeSlab[] }>(
         `${API.TRANSACTIONS}/fee-due-details/${studentId}`
       );
-      console.log('Due details fetched:', res.data);
       setFeeSlabs(res.data.slabs.map(slab => ({ ...slab, collection: 0 })));
-    } catch (error) {
-      console.error('Error fetching due details:', error);
+    } catch {
       toast.error('Failed to load due details');
     }
   };
 
-  const fetchTransactions = async () => {
-    setIsLoading(true);
-    try {
-      console.log('Fetching transactions from:', API.TRANSACTIONS);
-      const res = await axios.get<{ transactions: Transaction[] }>(API.TRANSACTIONS);
-      setTransactions(res.data.transactions);      
-    } catch (error: any) {
-      console.error('Error fetching transactions:', error.response?.data || error.message);
-      toast.error(`Failed to load transactions: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
+  // When class‐select dropdown changes
+  const handleSelectStudent = async (id: string) => {
+    setSelectedStudentId(id);
+    const stu = students.find(s => s.id === id) || null;
+    setSelectedStudent(stu);
+    await fetchDueDetails(id);
   };
-const handleSelectStudent = async (id: string) => {
-  setSelectedStudentId(id);
-  const student = students.find(s => s.id === id) || null;
-  setSelectedStudent(student);  // ✅ Set full student data
-  await fetchDueDetails(id);
-};
 
-
+  // Update either concession or collection on a slab
   const updateSlab = (slab: string, field: 'concession' | 'collection', value: number) => {
     setFeeSlabs(prev =>
       prev.map(s =>
@@ -177,9 +144,9 @@ const handleSelectStudent = async (id: string) => {
               [field]: value,
               finalPayable: Math.max(
                 s.dueAmount +
-                  (s.fine || 0) -
-                  (field === 'concession' ? value : s.concession || 0) -
-                  (field === 'collection' ? value : s.collection || 0),
+                  s.fine -
+                  (field === 'concession' ? value : s.concession) -
+                  (field === 'collection' ? value : s.collection),
                 0
               ),
             }
@@ -188,120 +155,75 @@ const handleSelectStudent = async (id: string) => {
     );
   };
 
+  // Collect all entered payments
   const handleCollectAll = async () => {
-  const validSlabs = feeSlabs.filter(s => s.collection > 0 && s.status === 'Due');
-  if (!validSlabs.length) {
-    return toast.error('No valid collection amounts entered');
-  }
+    const valid = feeSlabs.filter(s => s.collection > 0 && s.status === 'Due');
+    if (!valid.length) return toast.error('No valid collection amounts entered');
 
-  try {
-    const payload = {
-      studentId: selectedStudentId,
-      mode: paymentMode,              // ← use the radio choice
-      status: 'success',
-      slabs: validSlabs.map(s => ({
-        feeStructureId: s.feeStructureId,
-        amount: s.collection,
-        concession: s.concession,
-        fineConcession: 0,
-        paymentDate: new Date().toISOString(),
-        transactionId: paymentMode === 'online'
-          ? transactionId
-          : undefined              // ← only include when online
-      }))
-    };
-
-    const res = await axios.post<{ slipId: string }>(API.TRANSACTIONS, payload);
-    setSlipId(res.data.slipId);
-    toast.success('All payments recorded');
-
-    // refresh UI
-    await fetchDueDetails(selectedStudentId);
-    await fetchTransactions();
-    setShowReceipt(true);
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || 'Failed to record payments');
-  }
-};
-
-
-
-const handlePrintReceipt = async (slipId: string) => {
-  try {
-    type TransactionResponse = Transaction[] | { transactions: Transaction[] };
-
-    const [orgRes, transRes] = await Promise.all([
-      axios.get(API.TRANSPORT_ORG_PROFILE),
-      axios.get<TransactionResponse>(`${API.TRANSACTIONS}?slipId=${slipId}`),
-    ]);
-
-    // ✅ Safely extract transactions
-    const transactions = Array.isArray(transRes.data)
-      ? transRes.data
-      : transRes.data.transactions;
-
-    if (!transactions || transactions.length === 0) {
-      throw new Error('❌ No transactions found for this Slip ID');
+    try {
+      const payload = {
+        studentId: selectedStudentId,
+        mode: paymentMode,
+        status: 'success',
+        slabs: valid.map(s => ({
+          feeStructureId: s.feeStructureId,
+          amount: s.collection,
+          concession: s.concession,
+          fineConcession: 0,
+          paymentDate: new Date().toISOString(),
+          transactionId: paymentMode === 'online' ? transactionId : undefined,
+        })),
+      };
+      const res = await axios.post<{ slipId: string }>(API.TRANSACTIONS, payload);
+      setSlipId(res.data.slipId);
+      toast.success('All payments recorded');
+      await fetchDueDetails(selectedStudentId);
+      await fetchTransactions();
+      setShowReceipt(true);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to record payments');
     }
-
-    const student = students.find(s => s.id === transactions[0]?.studentId);
-    if (!student) {
-      throw new Error('❌ Student not found for this transaction');
-    }
-
-    const orgProfile = Array.isArray(orgRes.data) ? orgRes.data[0] : orgRes.data;
-    if (!orgProfile) {
-      throw new Error('❌ Organization profile not found');
-    }
-
-    // ✅ Log data for debug
-    console.log('📌 Slip ID:', slipId);
-    console.log('📌 Transactions:', transactions);
-    console.log('📌 Student:', student);
-    console.log('📌 Org Profile:', orgProfile);
-
-    const blob = await pdf(
-      <PdfReceiptDocument
-        school={orgProfile}
-        student={student}
-        transactions={transactions}
-      />
-    ).toBlob();
-
-    if (!blob || blob.size === 0) {
-      throw new Error('❌ PDF blob is empty or invalid');
-    }
-
-    // ✅ Display using FileReader & iframe (popup-safe)
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64data = reader.result;
-      const win = window.open('', '_blank');
-      if (!win) {
-        toast.error('Popup blocked. Please allow popups for this site.');
-        return;
-      }
-      win.document.write(`
-        <html><head><title>Transport Fee Receipt</title></head>
-        <body style="margin:0">
-          <iframe width="100%" height="100%" src="${base64data}" frameborder="0"></iframe>
-        </body></html>
-      `);
-    };
-    reader.readAsDataURL(blob);
-  } catch (err: any) {
-    console.error('🧨 Error generating receipt:', err);
-    toast.error(err.message || 'Failed to generate or open receipt');
-  }
-};
-
-
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditTransaction(transaction);
-    setShowEditModal(true);
   };
 
+  // Generate & open PDF receipt
+  const handlePrintReceipt = async (id: string) => {
+    try {
+      type TxResp = Transaction[] | { transactions: Transaction[] };
+      const [orgRes, txRes] = await Promise.all([
+        axios.get(API.TRANSPORT_ORG_PROFILE),
+        axios.get<TxResp>(`${API.TRANSACTIONS}?slipId=${id}`),
+      ]);
+      const txs = Array.isArray(txRes.data) ? txRes.data : txRes.data.transactions;
+      if (!txs.length) throw new Error('No transactions found for this Slip ID');
+
+      const student = students.find(s => s.id === txs[0].studentId)!;
+      const org = Array.isArray(orgRes.data) ? orgRes.data[0] : orgRes.data;
+
+      const blob = await pdf(
+        <PdfReceiptDocument school={org} student={student} transactions={txs} />
+      ).toBlob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const win = window.open('', '_blank');
+        if (!win) return toast.error('Popup blocked.');
+        win.document.write(`
+          <html><head><title>Receipt</title></head>
+          <body style="margin:0">
+            <iframe width="100%" height="100%" src="${reader.result}" frameborder="0"></iframe>
+          </body></html>
+        `);
+      };
+      reader.readAsDataURL(blob);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to generate receipt');
+    }
+  };
+
+  // Edit, update & delete handlers
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditTransaction(tx);
+    setShowEditModal(true);
+  };
   const handleUpdateTransaction = async () => {
     if (!editTransaction) return;
     try {
@@ -314,17 +236,14 @@ const handlePrintReceipt = async (slipId: string) => {
       setEditTransaction(null);
       await fetchTransactions();
       if (selectedStudentId) await fetchDueDetails(selectedStudentId);
-    } catch (err: any) {
-      console.error('Error updating transaction:', err.response?.data || err.message);
-      toast.error(err.response?.data?.message || 'Failed to update transaction');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to update transaction');
     }
   };
-
   const handleDeleteTransaction = (id: string) => {
     setDeleteTransactionId(id);
     setShowDeleteModal(true);
   };
-
   const confirmDeleteTransaction = async () => {
     if (!deleteTransactionId) return;
     try {
@@ -334,24 +253,33 @@ const handlePrintReceipt = async (slipId: string) => {
       setDeleteTransactionId(null);
       await fetchTransactions();
       if (selectedStudentId) await fetchDueDetails(selectedStudentId);
-    } catch (err: any) {
-      console.error('Error deleting transaction:', err.response?.data || err.message);
-      toast.error(err.response?.data?.message || 'Failed to delete transaction');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to delete transaction');
     }
   };
 
   return (
     <DashboardLayout>
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Transport Fee Collection</h2>
-           <button
-              onClick={fetchTransactions}
-              className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
-            >
-              🔄 Refresh Transactions
-            </button>
-          
+        {/* Page Heading */}
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Transport Fee Collection</h2>
+
+        {/* Total Collection Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="bg-green-100 border border-green-300 p-5 rounded-xl shadow-sm">
+            <h4 className="text-lg font-semibold text-green-800">Total Collection (Today)</h4>
+            <p className="text-2xl font-bold text-green-900 mt-2">₹{totalCollection}</p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end items-center gap-4 mb-6">
+          <button
+            onClick={fetchTransactions}
+            className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600"
+          >
+            🔄 Refresh Transactions
+          </button>
           <button
             onClick={() => {
               setSelectedStudentId('');
@@ -364,89 +292,74 @@ const handlePrintReceipt = async (slipId: string) => {
           </button>
         </div>
 
-        {/* Transaction History */}
+        {/* Total Collection Card
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-green-100 border border-green-300 p-5 rounded-xl shadow-sm">
+            <h4 className="text-lg font-semibold text-green-800">Total Collection (Today)</h4>
+            <p className="text-2xl font-bold text-green-900 mt-2">₹{totalCollection}</p>
+          </div>
+        </div> */}
+
+        {/* Transaction History Table */}
         <div className="mb-8">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Transaction History</h3>
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Today's Transaction History</h3>
           {isLoading ? (
             <p className="text-gray-600">Loading transactions...</p>
-          ) : transactions.length > 0 ? (
+          ) : transactions.length ? (
             <table className="w-full border-collapse">
               <thead className="bg-gray-100">
                 <tr>
-                     <th className="p-2 border text-left">#</th> {/* Serial Number */}
-                    <th className="p-2 border text-left">Student</th>
-                    <th className="p-2 border text-left">Admission No</th>
-                    <th className="p-2 border text-left">Slab</th>
-                    <th className="p-2 border text-left">Amount</th>
-                    <th className="p-2 border text-left">Concession</th>
-                    <th className="p-2 border text-left">Date</th>
-                    <th className="p-2 border text-left">Slip ID</th> {/* ✅ Added */}
-                    <th className="p-2 border text-left">Mode</th>
-                    <th className="p-2 border text-left">Actions</th>
-                  </tr>
-
+                  <th className="p-2 border">#</th>
+                  <th className="p-2 border">Student</th>
+                  <th className="p-2 border">Admission No</th>
+                  <th className="p-2 border">Slab</th>
+                  <th className="p-2 border">Amount</th>
+                  <th className="p-2 border">Concession</th>
+                  <th className="p-2 border">Date</th>
+                  <th className="p-2 border">Slip ID</th>
+                  <th className="p-2 border">Mode</th>
+                  <th className="p-2 border">Actions</th>
+                </tr>
               </thead>
- <tbody>
-    {Array.from(new Set(transactions.map(t => t.slipId))).map((currentSlipId, index) => {
-    const grouped = transactions.filter(t => t.slipId === currentSlipId);
-    const first = grouped[0];
-    const student = students.find(s => s.id === first.studentId);
+              <tbody>
+                {Array.from(new Set(transactions.map(t => t.slipId))).map((sid, idx) => {
+                  const group = transactions.filter(t => t.slipId === sid);
+                  const first = group[0];
+                  const stu = students.find(s => s.id === first.studentId);
+                  const totalAmt = group.reduce((a, t) => a + t.amount, 0);
+                  const totalCon = group.reduce((a, t) => a + (t.concession || 0), 0);
 
-    const totalAmount = grouped.reduce((sum, t) => sum + t.amount, 0);
-    const totalConcession = grouped.reduce((sum, t) => sum + (t.concession || 0), 0);
-
-    return (
-      <tr key={currentSlipId} className="hover:bg-gray-50">
-        <td className="p-2 border font-semibold text-gray-700">{index + 1}</td>
-        <td className="p-2 border">{student?.name || 'Unknown'}</td>
-        <td className="p-2 border">{student?.admissionNumber || '—'}</td>
-        <td className="p-2 border">
-          {grouped.map(t => t.slab).join(', ')}
-        </td>
-        <td className="p-2 border">₹{totalAmount}</td>
-        <td className="p-2 border">₹{totalConcession}</td>
-        <td className="p-2 border">
-          {new Date(first.paymentDate).toLocaleDateString()}
-        </td>
-        <td className="p-2 border font-semibold text-blue-700">{currentSlipId}</td>
-        <td className="p-2 border">{first.mode}</td>
-        <td className="p-2 border">
-          <div className="flex gap-2">
-            <button
-              onClick={() => handlePrintReceipt(currentSlipId)}
-
-              className="text-green-600 hover:text-green-800"
-              title="Print Receipt"
-            >
-              <FaPrint />
-            </button>
-            <button
-              onClick={() => handleEditTransaction(first)}
-              className="text-blue-600 hover:text-blue-800"
-              title="Edit"
-            >
-              <FaEdit />
-            </button>
-            <button
-              onClick={() => handleDeleteTransaction(first.id)}
-              className="text-red-600 hover:text-red-800"
-              title="Delete"
-            >
-              <FaTrash />
-            </button>
-          </div>
-        </td>
-
-      </tr>
-    );
-  })}
-</tbody>
-
-
-
+                  return (
+                    <tr key={sid} className="hover:bg-gray-50">
+                      <td className="p-2 border font-semibold">{idx + 1}</td>
+                      <td className="p-2 border">{stu?.name || 'Unknown'}</td>
+                      <td className="p-2 border">{stu?.admissionNumber || '—'}</td>
+                      <td className="p-2 border">{group.map(t => t.slab).join(', ')}</td>
+                      <td className="p-2 border">₹{totalAmt}</td>
+                      <td className="p-2 border">₹{totalCon}</td>
+                      <td className="p-2 border">{new Date(first.paymentDate).toLocaleDateString()}</td>
+                      <td className="p-2 border font-semibold text-blue-700">{sid}</td>
+                      <td className="p-2 border">{first.mode}</td>
+                      <td className="p-2 border">
+                        <div className="flex gap-2">
+                          <button onClick={() => handlePrintReceipt(sid)} className="text-green-600 hover:text-green-800">
+                            <FaPrint />
+                          </button>
+                          <button onClick={() => handleEditTransaction(first)} className="text-blue-600 hover:text-blue-800">
+                            <FaEdit />
+                          </button>
+                          <button onClick={() => handleDeleteTransaction(first.id)} className="text-red-600 hover:text-red-800">
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           ) : (
-            <p className="text-gray-600">No transactions available. Create a new transaction to get started.</p>
+            <p className="text-gray-600">No transactions available. Create one to get started.</p>
           )}
         </div>
 
@@ -455,39 +368,43 @@ const handlePrintReceipt = async (slipId: string) => {
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-semibold text-gray-800 mb-6">Collect Fee</h3>
+
+              {/* Tab selectors */}
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() => setTab('class')}
-                  className={`flex-1 py-2 px-4 ${tab === 'class' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                  className={`flex-1 py-2 ${tab === 'class' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
                 >
                   Select by Class
                 </button>
                 <button
                   onClick={() => setTab('admission')}
-                  className={`flex-1 py-2 px-4 ${tab === 'admission' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+                  className={`flex-1 py-2 ${tab === 'admission' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
                 >
                   By Admission No
                 </button>
               </div>
 
-
+              {/* Student detail box */}
               {selectedStudent && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-lg text-sm text-gray-800 space-y-1">
-                  <p><strong>Name:</strong> {selectedStudent.name}</p>
-                  <p><strong>Phone:</strong> {selectedStudent.phone || 'N/A'}</p>
-                  <p><strong>Admission No:</strong> {selectedStudent.admissionNumber}</p>
-                  {selectedStudent.class && <p><strong>Class:</strong> {selectedStudent.class.name}</p>}
-                  {selectedStudent.route && <p><strong>Route:</strong> {selectedStudent.route.name}</p>}
-                  {selectedStudent.stop && <p><strong>Stop:</strong> {selectedStudent.stop.stopName}</p>}
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-lg text-sm text-gray-800 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                  <div><strong>Name:</strong> {selectedStudent.name}</div>
+                  <div><strong>Phone:</strong> {selectedStudent.phone || 'N/A'}</div>
+                  <div><strong>Admission No:</strong> {selectedStudent.admissionNumber}</div>
+                  <div><strong>Class:</strong> {selectedStudent.class?.name || 'N/A'}</div>
+                  <div><strong>Route:</strong> {selectedStudent.route?.name || 'N/A'}</div>
+                  <div><strong>Stop:</strong> {selectedStudent.stop?.stopName || 'N/A'}</div>
+                  <div><strong>Bus No:</strong> {selectedStudent?.vehicle?.busNo || 'N/A'}</div>
                   {(selectedStudent.addressLine || selectedStudent.cityOrVillage) && (
-                    <p>
+                    <div className="md:col-span-2">
                       <strong>Address:</strong> {selectedStudent.addressLine}, {selectedStudent.cityOrVillage}
-                    </p>
+                    </div>
                   )}
                 </div>
               )}
 
 
+              {/* Class vs Admission input */}
               {tab === 'class' ? (
                 <>
                   <select
@@ -525,43 +442,34 @@ const handlePrintReceipt = async (slipId: string) => {
                     placeholder="Enter Admission Number"
                   />
                   <button
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg"
-                   onClick={() => {
-                      const student = students.find(s => s.admissionNumber === selectedAdmission);
-                      if (student) {
-                        handleSelectStudent(student.id);
-                        setSelectedStudent(student);  // ✅ Also set here
-                      } else {
-                        toast.error('Student not found');
-                      }
+                    onClick={() => {
+                      const stu = students.find(s => s.admissionNumber === selectedAdmission);
+                      if (stu) handleSelectStudent(stu.id);
+                      else toast.error('Student not found');
                     }}
-
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg"
                   >
                     Search & Load
                   </button>
                 </>
               )}
-              {/* just before your <table> of feeSlabs */}
+
+              {/* Payment mode */}
               <div className="mb-4 flex items-center gap-6">
-                {/* Cash radio */}
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
                     name="paymentMode"
-                    value="cash"
                     checked={paymentMode === 'cash'}
                     onChange={() => setPaymentMode('cash')}
                     className="form-radio"
                   />
                   <span className="ml-2">Cash</span>
                 </label>
-
-                {/* Online radio */}
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
                     name="paymentMode"
-                    value="online"
                     checked={paymentMode === 'online'}
                     onChange={() => setPaymentMode('online')}
                     className="form-radio"
@@ -570,6 +478,7 @@ const handlePrintReceipt = async (slipId: string) => {
                 </label>
               </div>
 
+              {/* Online txn ID */}
               {paymentMode === 'online' && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700">Transaction ID</label>
@@ -583,7 +492,7 @@ const handlePrintReceipt = async (slipId: string) => {
                 </div>
               )}
 
-
+              {/* Slabs table */}
               {feeSlabs.length > 0 && (
                 <>
                   <table className="w-full border mt-6">
@@ -609,9 +518,7 @@ const handlePrintReceipt = async (slipId: string) => {
                               value={s.concession}
                               min="0"
                               className="w-24 p-1 border rounded-lg"
-                              onChange={e =>
-                                updateSlab(s.slab, 'concession', parseFloat(e.target.value || '0'))
-                              }
+                              onChange={e => updateSlab(s.slab, 'concession', parseFloat(e.target.value))}
                               disabled={s.finalPayable === 0}
                             />
                           </td>
@@ -621,9 +528,7 @@ const handlePrintReceipt = async (slipId: string) => {
                               value={s.collection}
                               min="0"
                               className="w-24 p-1 border rounded-lg"
-                              onChange={e =>
-                                updateSlab(s.slab, 'collection', parseFloat(e.target.value || '0'))
-                              }
+                              onChange={e => updateSlab(s.slab, 'collection', parseFloat(e.target.value))}
                               disabled={s.finalPayable === 0}
                             />
                           </td>
@@ -641,9 +546,9 @@ const handlePrintReceipt = async (slipId: string) => {
                 </>
               )}
 
+              {/* Close modal */}
               <div className="mt-6 text-right">
                 <button
-                  className="bg-gray-400 text-white px-4 py-2 rounded-lg"
                   onClick={() => {
                     setShowModal(false);
                     setFeeSlabs([]);
@@ -652,6 +557,7 @@ const handlePrintReceipt = async (slipId: string) => {
                     setSelectedAdmission('');
                     setSelectedStudent(null);
                   }}
+                  className="bg-gray-400 text-white px-4 py-2 rounded-lg"
                 >
                   Close
                 </button>
@@ -660,54 +566,59 @@ const handlePrintReceipt = async (slipId: string) => {
           </div>
         )}
 
-        {/* Edit Transaction Modal */}
+        {/* Edit Modal */}
         {showEditModal && editTransaction && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Edit Transaction</h3>
+              <h3 className="text-xl font-semibold mb-4">Edit Transaction</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Amount</label>
+                  <label className="block text-sm font-medium">Amount</label>
                   <input
                     type="number"
                     value={editTransaction.amount}
                     min="0"
                     className="w-full p-2 border rounded-lg"
                     onChange={e =>
-                      setEditTransaction({ ...editTransaction, amount: parseFloat(e.target.value || '0') })
+                      setEditTransaction({
+                        ...editTransaction,
+                        amount: parseFloat(e.target.value),
+                      })
                     }
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Concession</label>
+                  <label className="block text-sm font-medium">Concession</label>
                   <input
                     type="number"
                     value={editTransaction.concession}
                     min="0"
                     className="w-full p-2 border rounded-lg"
                     onChange={e =>
-                      setEditTransaction({ ...editTransaction, concession: parseFloat(e.target.value || '0') })
+                      setEditTransaction({
+                        ...editTransaction,
+                        concession: parseFloat(e.target.value),
+                      })
                     }
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment Mode</label>
+                  <label className="block text-sm font-medium">Mode</label>
                   <select
                     value={editTransaction.mode}
                     className="w-full p-2 border rounded-lg"
-                    onChange={e => setEditTransaction({ ...editTransaction, mode: e.target.value })}
+                    onChange={e =>
+                      setEditTransaction({ ...editTransaction, mode: e.target.value })
+                    }
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Card">Card</option>
-                    <option value="Online">Online</option>
+                    <option>Cash</option>
+                    <option>Card</option>
+                    <option>Online</option>
                   </select>
                 </div>
               </div>
-              <div className="mt-6 flex gap-2 justify-end">
-                <button
-                  onClick={handleUpdateTransaction}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-                >
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={handleUpdateTransaction} className="bg-blue-600 text-white px-4 py-2 rounded-lg">
                   Save
                 </button>
                 <button
@@ -724,25 +635,22 @@ const handlePrintReceipt = async (slipId: string) => {
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
+        {/* Delete Confirmation */}
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirm Deletion</h3>
-              <p className="text-gray-600 mb-6">Are you sure you want to delete this transaction? This action cannot be undone.</p>
-              <div className="flex gap-2 justify-end">
+              <h3 className="text-xl font-semibold mb-4">Confirm Deletion</h3>
+              <p className="mb-6">Are you sure you want to delete this transaction?</p>
+              <div className="flex justify-end gap-2">
                 <button
                   onClick={confirmDeleteTransaction}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg"
                 >
                   Delete
                 </button>
                 <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setDeleteTransactionId(null);
-                  }}
-                  className="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-400 text-white px-4 py-2 rounded-lg"
                 >
                   Cancel
                 </button>
@@ -754,34 +662,32 @@ const handlePrintReceipt = async (slipId: string) => {
         {/* Receipt Modal */}
         {showReceipt && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Receipt</h3>
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4">Receipt</h3>
               <p>
                 <strong>Student:</strong> {students.find(s => s.id === selectedStudentId)?.name}
               </p>
               <p>
-                <strong>Slabs:</strong> {feeSlabs.filter(s => s.collection > 0).map(s => s.slab).join(', ') || 'Multiple'}
+                <strong>Slabs:</strong>{' '}
+                {feeSlabs.filter(s => s.collection > 0).map(s => s.slab).join(', ') || 'Multiple'}
               </p>
               <p>
-                <strong>Concession:</strong> ₹{feeSlabs.reduce((sum, s) => sum + (s.concession || 0), 0)}
+                <strong>Concession:</strong> ₹{feeSlabs.reduce((a, s) => a + s.concession, 0)}
               </p>
               <p>
-                <strong>Paid Amount:</strong> ₹{feeSlabs.reduce((sum, s) => sum + (s.collection || 0), 0)}
+                <strong>Paid Amount:</strong> ₹{feeSlabs.reduce((a, s) => a + s.collection, 0)}
               </p>
               <p>
                 <strong>Date:</strong> {new Date().toLocaleString()}
               </p>
-              <div className="mt-4 flex gap-2 justify-end">
+              <div className="mt-4 flex justify-end gap-2">
                 <button
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                   onClick={() => handlePrintReceipt(slipId!)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg"
                 >
                   <FaPrint /> Print
                 </button>
-                <button
-                  className="bg-gray-400 text-white px-4 py-2 rounded-lg"
-                  onClick={() => setShowReceipt(false)}
-                >
+                <button onClick={() => setShowReceipt(false)} className="bg-gray-400 text-white px-4 py-2 rounded-lg">
                   Close
                 </button>
               </div>
