@@ -330,15 +330,15 @@ const TransactionReportPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-green-100 border border-green-300 p-4 rounded-xl">
             <h4 className="text-lg font-semibold text-green-800">Total Collection</h4>
-            <p className="text-2xl font-bold text-green-900">₹{totalCollection}</p>
+            <p className="text-2xl font-bold text-green-900">{totalCollection}</p>
           </div>
           <div className="bg-yellow-100 border border-yellow-300 p-4 rounded-xl">
             <h4 className="text-lg font-semibold text-yellow-800">Cash Collection</h4>
-            <p className="text-2xl font-bold text-yellow-900">₹{cashCollection}</p>
+            <p className="text-2xl font-bold text-yellow-900">{cashCollection}</p>
           </div>
           <div className="bg-blue-100 border border-blue-300 p-4 rounded-xl">
             <h4 className="text-lg font-semibold text-blue-800">Online Collection</h4>
-            <p className="text-2xl font-bold text-blue-900">₹{onlineCollection}</p>
+            <p className="text-2xl font-bold text-blue-900">{onlineCollection}</p>
           </div>
         </div>
 
@@ -386,7 +386,7 @@ const TransactionReportPage: React.FC = () => {
                     <td className="border p-2">{student.name}</td>
                     <td className="border p-2">{student.admissionNumber}</td>
                     <td className="border p-2">{slabs}</td>
-                    <td className="border p-2">₹{totalAmount}</td>
+                    <td className="border p-2">{totalAmount}</td>
                     <td className="border p-2">{first.mode}</td>
                     <td className="border p-2">{new Date(first.paymentDate).toLocaleDateString()}</td>
                     <td className="border p-2 font-semibold text-blue-700">{sid}</td>

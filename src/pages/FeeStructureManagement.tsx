@@ -209,7 +209,7 @@ const FeeStructureManagement: React.FC = () => {
                   <tr key={fee.id}>
                     <td className="border p-2">{getStopName(fee.stopId)}</td>
                     <td className="border p-2">{fee.slab}</td>
-                    <td className="border p-2">₹{fee.amount}</td>
+                    <td className="border p-2">{fee.amount}</td>
                     <td className="border p-2 capitalize">{fee.frequency}</td>
                     <td className="border p-2 text-center">
                       <button onClick={() => handleEdit(fee)} className="text-blue-600 mr-2"><FaEdit /></button>

@@ -63,6 +63,10 @@ const StudentDashboard: React.FC = () => {
   const [selectedSlabs, setSelectedSlabs] = useState<Slab[]>([]);
   const [totalPayable, setTotalPayable] = useState(0);
 
+  const convenienceCharge = parseFloat((totalPayable * 0.0236).toFixed(2));
+  const totalWithCharge = parseFloat((totalPayable + convenienceCharge).toFixed(2));
+
+
   useEffect(() => {
     const storedStudent = localStorage.getItem('studentInfo');
     if (!storedStudent) {
@@ -348,47 +352,51 @@ const StudentDashboard: React.FC = () => {
 
 
       {/* Confirm Payment Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold text-blue-700 mb-4">Confirm Your Payment</h2>
-            <ul className="mb-4 space-y-1 text-sm text-gray-700 max-h-48 overflow-auto">
-              {selectedSlabs.map((s, i) => (
-                <li key={i}>
-                  ✅ <strong>{s.slab}</strong> – Rs. {s.finalPayable}
-                </li>
-              ))}
-            </ul>
-            <p className="text-base font-semibold mb-4 text-gray-800">
-              Total Payable: <span className="text-green-700">Rs. {totalPayable}</span>
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-1 rounded bg-gray-300 hover:bg-gray-400 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const slabDetails = selectedSlabs.map(slab => ({
-                    slab: slab.slab,
-                    amount: slab.finalPayable,
-                    feeStructureId: slab.feeStructureId,
-                  }));
-                  setShowModal(false);
-                  navigate(
-                    `/student/pay?slabs=${encodeURIComponent(JSON.stringify(slabDetails))}&total=${totalPayable}`
-                  );
-                }}
-                className="px-4 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
-              >
-                Proceed to Pay
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{showModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+      <h2 className="text-lg font-bold text-blue-700 mb-4">Confirm Your Payment</h2>
+
+      <ul className="mb-4 space-y-1 text-sm text-gray-700 max-h-48 overflow-auto">
+        {selectedSlabs.map((s, i) => (
+          <li key={i}>
+            ✅ <strong>{s.slab}</strong> – Rs. {s.finalPayable}
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-xs text-gray-600 mb-4">
+        * A convenience charge of 2.36% will be applied for online payments.
+      </p>
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setShowModal(false)}
+          className="px-4 py-1 rounded bg-gray-300 hover:bg-gray-400 text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => {
+            const slabDetails = selectedSlabs.map(slab => ({
+              slab: slab.slab,
+              amount: slab.finalPayable,
+              feeStructureId: slab.feeStructureId,
+            }));
+            setShowModal(false);
+            navigate(
+              `/student/pay?slabs=${encodeURIComponent(JSON.stringify(slabDetails))}&total=${totalPayable}`
+            );
+          }}
+          className="px-4 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
+        >
+          Proceed to Pay
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </StudentLayout>
   );
 };

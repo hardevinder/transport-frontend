@@ -138,8 +138,8 @@ const FeeDueDetailsPage: React.FC = () => {
                 <th className="p-2 border">Stop</th>
                 <th className="p-2 border">Bus</th>
                 <th className="p-2 border">Slab</th>
-                <th className="p-2 border">Due ₹</th>
-                <th className="p-2 border">Paid ₹</th>
+                <th className="p-2 border">Due </th>
+                <th className="p-2 border">Paid </th>
                 <th className="p-2 border">Status</th>
               </tr>
             </thead>
@@ -158,8 +158,8 @@ const FeeDueDetailsPage: React.FC = () => {
                     <td className="p-2 border">{student.stop}</td>
                     <td className="p-2 border">{student.vehicle ?? '—'}</td>
                     <td className="p-2 border">{slab.slab}</td>
-                    <td className="p-2 border">₹{slab.finalPayable}</td>
-                    <td className="p-2 border text-green-700 font-medium">₹{slab.paidAmount}</td>
+                    <td className="p-2 border">{slab.finalPayable}</td>
+                    <td className="p-2 border text-green-700 font-medium">{slab.paidAmount}</td>
                     <td className={`p-2 border ${slab.status === 'Paid' ? 'text-green-600' : 'text-red-600'}`}>{slab.status}</td>
                   </tr>
                 ))

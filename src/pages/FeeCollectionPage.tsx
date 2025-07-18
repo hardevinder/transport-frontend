@@ -268,7 +268,7 @@ const FeeCollectionPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="bg-green-100 border border-green-300 p-5 rounded-xl shadow-sm">
             <h4 className="text-lg font-semibold text-green-800">Total Collection (Today)</h4>
-            <p className="text-2xl font-bold text-green-900 mt-2">₹{totalCollection}</p>
+            <p className="text-2xl font-bold text-green-900 mt-2">{totalCollection}</p>
           </div>
         </div>
 
@@ -296,7 +296,7 @@ const FeeCollectionPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-green-100 border border-green-300 p-5 rounded-xl shadow-sm">
             <h4 className="text-lg font-semibold text-green-800">Total Collection (Today)</h4>
-            <p className="text-2xl font-bold text-green-900 mt-2">₹{totalCollection}</p>
+            <p className="text-2xl font-bold text-green-900 mt-2">{totalCollection}</p>
           </div>
         </div> */}
 
@@ -335,8 +335,8 @@ const FeeCollectionPage: React.FC = () => {
                       <td className="p-2 border">{stu?.name || 'Unknown'}</td>
                       <td className="p-2 border">{stu?.admissionNumber || '—'}</td>
                       <td className="p-2 border">{group.map(t => t.slab).join(', ')}</td>
-                      <td className="p-2 border">₹{totalAmt}</td>
-                      <td className="p-2 border">₹{totalCon}</td>
+                      <td className="p-2 border">{totalAmt}</td>
+                      <td className="p-2 border">{totalCon}</td>
                       <td className="p-2 border">{new Date(first.paymentDate).toLocaleDateString()}</td>
                       <td className="p-2 border font-semibold text-blue-700">{sid}</td>
                       <td className="p-2 border">{first.mode}</td>
@@ -510,8 +510,8 @@ const FeeCollectionPage: React.FC = () => {
                       {feeSlabs.map(s => (
                         <tr key={s.slab}>
                           <td className="p-2 border">{s.slab}</td>
-                          <td className="p-2 border">₹{s.dueAmount}</td>
-                          <td className="p-2 border">₹{s.fine}</td>
+                          <td className="p-2 border">{s.dueAmount}</td>
+                          <td className="p-2 border">{s.fine}</td>
                           <td className="p-2 border">
                             <input
                               type="number"
@@ -532,7 +532,7 @@ const FeeCollectionPage: React.FC = () => {
                               disabled={s.finalPayable === 0}
                             />
                           </td>
-                          <td className="p-2 border font-semibold">₹{s.finalPayable}</td>
+                          <td className="p-2 border font-semibold">{s.finalPayable}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -672,10 +672,10 @@ const FeeCollectionPage: React.FC = () => {
                 {feeSlabs.filter(s => s.collection > 0).map(s => s.slab).join(', ') || 'Multiple'}
               </p>
               <p>
-                <strong>Concession:</strong> ₹{feeSlabs.reduce((a, s) => a + s.concession, 0)}
+                <strong>Concession:</strong> {feeSlabs.reduce((a, s) => a + s.concession, 0)}
               </p>
               <p>
-                <strong>Paid Amount:</strong> ₹{feeSlabs.reduce((a, s) => a + s.collection, 0)}
+                <strong>Paid Amount:</strong> {feeSlabs.reduce((a, s) => a + s.collection, 0)}
               </p>
               <p>
                 <strong>Date:</strong> {new Date().toLocaleString()}
